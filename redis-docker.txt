@@ -1,0 +1,4 @@
+
+This redis container MUSDT be running on local host to test the scripts ... This redis is running without AUTH enabled for testing only
+
+docker run --name hotel-booking-redis -p 6379:6379 -d redis
