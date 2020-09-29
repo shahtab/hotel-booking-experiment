@@ -1,12 +1,9 @@
-
 import json
 import requests
 import jinja2
 import os
 import urllib3
 urllib3.disable_warnings()
-
-
 
 global _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT
 _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT = "https://travelnext.works"
@@ -58,8 +55,10 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
    
 if __name__ == '__main__':
       
-  city_search_obj = TraveloproHotelSearchByCity('Jashim_testAPI', 'JashimTest@2020', 'Test', 'London', 'United Kingdom')
+  user_id = os.environ.get('travelopro_user_id') 
+  user_password = os.environ.get('travelopro_user_password')  
+
+  city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', 'London', 'United Kingdom')
   hotel_listing = city_search_obj._get_hotels_by_city()
   print(hotel_listing)
-
 
