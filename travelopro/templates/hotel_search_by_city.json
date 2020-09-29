@@ -1,0 +1,23 @@
+{
+  "user_id": "{{ user_id }}",
+  "user_password": "{{ user_password }}",
+  "access": "{{ access }}",
+  "ip_address": "10.10.10.11",
+  "requiredCurrency": "USD",
+  "checkin": "2020-10-17",
+  "checkout": "2020-10-18",
+  "city_name": "{{ city_name }}",
+  "country_name": "{{ country_name }}",
+  "radius": 50,
+  "maxResult": 200,
+  "occupancy": [
+    {
+      "room_no": 1,
+      "adult": 2,
+      "child": 0,
+      "child_age": [
+        0
+      ]
+    }
+  ]
+}
