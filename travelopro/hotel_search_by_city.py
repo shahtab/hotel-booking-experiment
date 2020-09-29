@@ -57,6 +57,7 @@ if __name__ == '__main__':
       
   user_id = os.environ.get('travelopro_user_id') 
   user_password = os.environ.get('travelopro_user_password')  
+<<<<<<< HEAD
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', 'London', 'United Kingdom')
   hotel_listing = city_search_obj._get_hotels_by_city()
@@ -64,3 +65,10 @@ if __name__ == '__main__':
   print(hotel_listing)
   print(hotel_listing.get('itineraries'))
   print(hotel_listing.get('status'))
+=======
+
+  city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', 'London', 'United Kingdom')
+  hotel_listing = city_search_obj._get_hotels_by_city()
+  print(hotel_listing)
+
+>>>>>>> 56d60689c31c94c5324a924a8a82734e222a2ae7
