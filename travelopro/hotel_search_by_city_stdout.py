@@ -10,9 +10,9 @@ Usage:
         travelopro_user_id=
         travelopro_user_password=
 
-        hotel_search_by_city_stdout.py -c 'CITY_NAME' -C 'COUNTRY_NAME'
-        hotel_search_by_city_stdout.py -c 'London' -C 'United Kingdom'
-        hotel_search_by_city_stdout.py -c 'Barcelona' -C 'Spain'
+        hotel_search_by_city_stdout.py -c 'CITY_NAME' -C 'COUNTRY_NAME' -s true -l true
+        hotel_search_by_city_stdout.py -c 'London' -C 'United Kingdom' -s true -l true
+        hotel_search_by_city_stdout.py -c 'Barcelona' -C 'Spain' -s true -l true
 """
 
 import json
