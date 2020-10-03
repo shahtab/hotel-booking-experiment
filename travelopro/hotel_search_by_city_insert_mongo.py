@@ -132,7 +132,8 @@ if __name__ == '__main__':
     for each_hotel in hotel_listing_initial.get('itineraries'):
       try:
         insert_response = collection.insert_one(each_hotel)
-        print(insert_response)
+        print(f"--- {insert_response} ---")
+        print(each_hotel)
       except Exception as e:
         print(e)
 
@@ -158,7 +159,8 @@ if __name__ == '__main__':
         for each_hotel in hotel_listing_more.get('itineraries'):
           try:
               insert_response = collection.insert_one(each_hotel)
-              print(insert_response)
+              print(f"--- {insert_response} ---")
+              print(each_hotel)
           except Exception as e:
               print(e)
       continue
