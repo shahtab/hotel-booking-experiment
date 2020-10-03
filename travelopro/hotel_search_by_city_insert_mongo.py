@@ -5,6 +5,16 @@ Desc: Query Travelopro Hotel Booking API to search hotels by City Name
       And insert the records into MongoDB Database
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
+        First need to set the OS environment variables as below:
+
+        travelopro_user_id=
+        travelopro_user_password=
+        mongodb_host=my.mongodb.net
+        mongodb_database=
+        mongodb_user_id=
+        mongodb_user_password=
+        AND export these 
+
         hotel_search_by_city_insert_mongo.py -c 'London' -C 'United Kingdom'
         hotel_search_by_city_insert_mongo.py -c 'Barcelona' -C 'Spain'
 """

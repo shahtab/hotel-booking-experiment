@@ -5,6 +5,11 @@ __author__ = 'Shahtab Khandakar'
 Desc: Query Travelopro Hotel Booking API to search hotels by City Name
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
+        First need to set the OS environment variables as below and export them:
+        
+        travelopro_user_id=
+        travelopro_user_password=
+
         hotel_search_by_city_stdout.py -c 'London' -C 'United Kingdom'
         hotel_search_by_city_stdout.py -c 'Barcelona' -C 'Spain'
 """
