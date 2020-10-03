@@ -10,6 +10,7 @@ Usage:
         travelopro_user_id=
         travelopro_user_password=
 
+        hotel_search_by_city_ingest_es.py -c 'CITY_NAME' -C 'COUNTRY_NAME'
         hotel_search_by_city_ingest_es.py -c 'London' -C 'United Kingdom'
         hotel_search_by_city_ingest_es.py -c 'Barcelona' -C 'Spain'
 """
