@@ -1,3 +1,14 @@
+__author__ = 'Shahtab Khandakar'
+
+"""
+Desc: Query Travelopro Hotel Booking API to search hotels by City Name
+      And ingest the data into Elasticsearch Index
+      Can query ONLY the hotels and cities that Travelocity has in their inventory
+Usage:   
+        hotel_search_by_city_ingest_es.py -c 'London' -C 'United Kingdom'
+        hotel_search_by_city_ingest_es.py -c 'Barcelona' -C 'Spain'
+"""
+
 import json
 import requests
 import jinja2
@@ -63,60 +74,70 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     """ https://travelnext.works/api/hotel_trawexv6/moreResults?sessionId=<sessionId>&nextToken=<nextToken>&maxResult=20> """
 
     params = {"sessionId": sessionId, "nextToken": nextToken, "maxResult": 100}
-    response = requests.get(
-       _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/moreResults", 
-       params=params, 
-       verify=False, 
-       timeout=20
-    )
+    try:
+      response = requests.get(
+         _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/moreResults", 
+         params=params, 
+         verify=False, 
+         timeout=20
+      )
+    except IOError as e:
+       print(e)
+       
     return response.json()
         
-   
+def parse_args():
+    try:
+        import argparse
+    except:
+        raise
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cityname', required=False, help="Specify the cityname")
+    parser.add_argument('-C', '--countryname', required=False,help="Specify the country name")
+    args = parser.parse_args()
+    return parser.parse_args()    
+
+
 if __name__ == '__main__':
-      
+  
+  args = parse_args()
   user_id = os.environ.get('travelopro_user_id') 
   user_password = os.environ.get('travelopro_user_password')  
 
-  city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', 'London', 'United Kingdom')
-  hotel_listing = city_search_obj._get_initial_numof_hotels_by_city()
-  search_status_dict = hotel_listing.get('status')
+  city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
+  hotel_listing_initial  = city_search_obj._get_initial_numof_hotels_by_city()
+  search_initial_status_dict = hotel_listing_initial.get('status')
 
-  #print(hotel_listing.get('itineraries'))
+  """ First/initial paginated data"""
   with ElasticsearchConnectionManager('127.0.0.1') as _es:
-    for each_hotel in hotel_listing.get('itineraries'):
+    for each_hotel in hotel_listing_initial.get('itineraries'):
       ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
       print(ingest_response)
 
-  #print(hotel_listing.get('status'))
-  #print(search_status_dict['sessionId'])
 
+  status_sessionId = search_initial_status_dict['sessionId']
+  status_token = search_initial_status_dict['nextToken']
 
-  """ search_status_dict['nextToken'] is a string """
-  while search_status_dict['nextToken']:
-    hotel_listing_more = city_search_obj._get_remaining_hotels_by_city(
-                                            search_status_dict['sessionId'],
-                                            search_status_dict['nextToken'],
-                                        )
+  """ Second and until last paginated data"""
+  while status_token:
+    hotel_listing_more = city_search_obj._get_remaining_hotels_by_city(status_sessionId, status_token)
     
     print(hotel_listing_more)
     more_status_dict = hotel_listing_more.get('status')
     
     """ hotel_listing_more.get('itineraries') is a LIST of DICTS"""
 
-    if len(more_status_dict.get('nextToken')) != 0:
-      search_status_dict['nextToken'] = more_status_dict['nextToken'] 
-      #print(hotel_listing_more.get('itineraries'))
-      print(hotel_listing_more.get('nextToken'))
-      #all_hotel_ids = [each_hotel['hotelId'] for each_hotel in hotel_listing_more.get('itineraries')]
+    if more_status_dict.get('sessionId'):
+      status_sessionId = more_status_dict['sessionId'] 
+      status_token = more_status_dict['nextToken'] 
 
       with ElasticsearchConnectionManager('127.0.0.1') as _es:
            for each_hotel in hotel_listing_more.get('itineraries'):
                    ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
                    print(ingest_response)
-          
       continue
-
-    if not more_status_dict.get('moreResults'):
+    else:
       break
 
  
