@@ -71,8 +71,17 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
         verify=False,
         timeout=20
         )
-    except IOError as e:   
-      print(e)
+      response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+      print (err.response.text)
+      raise SystemExit(err)
+
+    """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
+    print(response.json().get('status'))
+    if response.json().get('status'):
+      if not response.json().get('status')['sessionId']:
+        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
 
     return response.json()
   
@@ -87,8 +96,17 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
          verify=False, 
          timeout=20
       )
-    except IOError as e:
-       print(e)
+      response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+      print (err.response.text)
+      raise SystemExit(err)
+
+    """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
+    print(response.json().get('status'))
+    if response.json().get('status'):
+      if not response.json().get('status')['sessionId']:
+        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
        
     return response.json()
 
@@ -111,8 +129,13 @@ def parse_args():
 if __name__ == '__main__':
   
   args = parse_args()
-  user_id = os.environ.get('travelopro_user_id') 
-  user_password = os.environ.get('travelopro_user_password')  
+
+  try:
+      user_id = os.environ.get('travelopro_user_id') 
+      user_password = os.environ.get('travelopro_user_password')  
+  except Exception as e:
+      print(e)
+      sys.exit("Required OS environment variables need to be set. Exiting ...")
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
   hotel_listing_initial = city_search_obj._get_initial_numof_hotels_by_city()
@@ -124,11 +147,13 @@ if __name__ == '__main__':
   #print(hotel_listing_initial.get('itineraries'))
 
   hotel_count = 0
+  status_sessionId = search_initial_status_dict['sessionId']
 
   if args.list:
     for each_hotel in hotel_listing_initial.get('itineraries'):
         hotel_count += 1
         print(f"-------------------  {hotel_count} -----------------")
+        each_hotel['sessionId'] = status_sessionId
         print(each_hotel)
   
   status_token = search_initial_status_dict['nextToken']
@@ -150,6 +175,7 @@ if __name__ == '__main__':
         for each_hotel in hotel_listing_more.get('itineraries'):
             hotel_count += 1
             print(f"-------------------  {hotel_count} -----------------")
+            each_hotel['sessionId'] = status_sessionId
             print(each_hotel)
           
       continue

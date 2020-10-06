@@ -72,10 +72,18 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
          verify=False, 
          timeout=20
       )
-    except IOError as e:
-       print(e)
+      response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+      print (err.response.text)  
+      raise SystemExit(err)
+
+    """ This is required as Travelopro send status code of 200 even though when access is denied. This is a Hack :-("""
+    if response.json().get('status'):
+      if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+        sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
        
     return response.json()
+
         
 def parse_args():
     try:
@@ -93,8 +101,13 @@ def parse_args():
 if __name__ == '__main__':
   
   args = parse_args()
-  user_id = os.environ.get('travelopro_user_id') 
-  user_password = os.environ.get('travelopro_user_password')  
+  
+  try:
+      user_id = os.environ.get('travelopro_user_id') 
+      user_password = os.environ.get('travelopro_user_password')  
+  except Exception as e:
+      print(e)
+      sys.exit("Required OS environment variables need to be set. Exiting ...")
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, args.cityname, args.countryname)
   hotel_static_contents_listing  = city_search_obj._get_static_contents_hotels_by_city()
