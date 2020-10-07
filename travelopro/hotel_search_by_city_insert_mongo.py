@@ -3,6 +3,8 @@ __author__ = 'Shahtab Khandakar'
 """
 Desc: Query Travelopro Hotel Booking API to search hotels by City Name
       And insert the records into MongoDB Database
+      ITEM: - 'HOTEL AVAILABILITY SEARCH' + 'CHECK MORE HOTEL RESULTS' from travelopro website
+            also get 'HOTEL AVAILABILITY RESPONSE'
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
 
@@ -173,9 +175,9 @@ if __name__ == '__main__':
       status_token = more_status_dict['nextToken']
 
       #all_hotel_ids = [each_hotel['hotelId'] for each_hotel in hotel_listing_more.get('itineraries')]
-      with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
-        collection = mongo.connection.travelopro.hotelsByCity
-        for each_hotel in hotel_listing_more.get('itineraries'):
+      #with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
+      collection = mongo.connection.travelopro.hotelsByCity
+      for each_hotel in hotel_listing_more.get('itineraries'):
           try:
               each_hotel['sessionId'] = status_sessionId
               insert_response = collection.insert_one(each_hotel)

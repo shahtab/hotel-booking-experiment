@@ -2,9 +2,9 @@
 __author__ = 'Shahtab Khandakar'
 
 """
-Desc: Query Travelopro Hotel Booking API to search hotels by City Name and show output in CONSOLE
-      ITEM: - 'HOTEL AVAILABILITY SEARCH' + 'CHECK MORE HOTEL RESULTS' from travelopro website
-             also get 'HOTEL AVAILABILITY RESPONSE'
+Desc: Query Travelopro Hotel Booking API to search hotels by City Name nd GET MORE HOTEL CONTENTS for the searched hotels
+      ITEM:  - 'GET HOTEL CONTENTS' -  from Travelopro website FOR MORE RECENT STATIC CONTENT
+             - This is in addition to 'HOTEL STATIC CONTENTS'
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
         First need to set the OS environment variables as below and export them:
@@ -127,6 +127,30 @@ def parse_args():
     args = parser.parse_args()
     return parser.parse_args()    
 
+def _get_hotel_contents_for_each_hotel(hotel_dict):
+    """https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId>&hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>"""
+
+    params = {
+               'sessionId': hotel_dict['sessionId'],
+               'hotelId': hotel_dict['hotelId'],
+               'productId': hotel_dict['productId'],
+               'tokenId': hotel_dict['tokenId']
+               }
+    try:
+        response = requests.get(
+                      _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/hotelDetails", 
+                      params=params, 
+                      verify=False, 
+                      timeout=20
+                    )
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        print (err.response.text)  
+        raise SystemExit(err)
+
+    return response.json()
+
+
    
 if __name__ == '__main__':
   
@@ -134,10 +158,6 @@ if __name__ == '__main__':
 
   try:
       user_id = os.environ.get('travelopro_user_id') 
-      user_id = os.environ.get('travelopro_user_id') 
-      user_id = os.environ.get('travelopro_user_id') 
-      user_password = os.environ.get('travelopro_user_password')  
-      user_password = os.environ.get('travelopro_user_password')  
       user_password = os.environ.get('travelopro_user_password')  
   except Exception as e:
       print(e)
@@ -155,12 +175,24 @@ if __name__ == '__main__':
   hotel_count = 0
   status_sessionId = search_initial_status_dict['sessionId']
 
+  #itineraries hold hotel info in dict... loop over these and do other queries for "Get Hotel Content"
+  # GET https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId> &hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>
+  # for each hotel we query
+  
+with ElasticsearchConnectionManager('127.0.0.1') as _es:
+
   if args.list:
     for each_hotel in hotel_listing_initial.get('itineraries'):
         hotel_count += 1
         print(f"-------------------  {hotel_count} -----------------")
         each_hotel['sessionId'] = status_sessionId
         print(each_hotel)
+
+        get_hotel_contents = _get_hotel_contents_for_each_hotel(each_hotel)
+        #with ElasticsearchConnectionManager('127.0.0.1') as _es:
+        ingest_response = _es.index(index='travelopro-hotel-more-static-contents-by-city', doc_type='_doc', body=get_hotel_contents)
+        print(ingest_response)
+
   
   status_token = search_initial_status_dict['nextToken']
   status_sessionId = search_initial_status_dict['sessionId']
@@ -169,6 +201,7 @@ if __name__ == '__main__':
     hotel_listing_more = city_search_obj._get_remaining_hotels_by_city(status_sessionId, status_token)
     more_status_dict = hotel_listing_more.get('status')
     print(more_status_dict)
+
     
     #if len(more_status_dict.get('nextToken')) != 0:
     if more_status_dict.get('sessionId'):
@@ -183,6 +216,11 @@ if __name__ == '__main__':
             print(f"-------------------  {hotel_count} -----------------")
             each_hotel['sessionId'] = status_sessionId
             print(each_hotel)
+
+            get_hotel_contents = _get_hotel_contents_for_each_hotel(each_hotel)
+            #with ElasticsearchConnectionManager('127.0.0.1') as _es:
+            ingest_response = _es.index(index='travelopro-hotel-more-static-contents-by-city', doc_type='_doc', body=get_hotel_contents)
+            print(ingest_response)
           
       continue
     else :

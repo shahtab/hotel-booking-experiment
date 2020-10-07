@@ -3,6 +3,7 @@ __author__ = 'Shahtab Khandakar'
 """
 Desc: Get all the CITIES and Country Names from the Travelopro Invemntory
       And Insert the records into Elasticsearch and MongoDB
+      ITEM: - 'CITIES' from travelopro website
 
 Usage: 
        get_all_travelopro_cities.py [-e/--elastic] true [-m/--mongo] true   -> for both Elastic & MongoDB

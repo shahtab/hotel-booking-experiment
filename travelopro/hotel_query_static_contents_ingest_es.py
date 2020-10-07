@@ -3,6 +3,7 @@ __author__ = 'Shahtab Khandakar'
 """
 Desc: Query Travelopro Hotel Booking API to search hotels by City Name and get all the static contents
       And ingest the data into Elasticsearch Index
+      ITEM: - 'HOTEL STATIC CONTENT' from travelopro website
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
         First need to set the OS environment variables as below and export them:

@@ -3,6 +3,8 @@ __author__ = 'Shahtab Khandakar'
 """
 Desc: Query Travelopro Hotel Booking API to search hotels by City Name
       And ingest the data into Elasticsearch Index
+      ITEM: - 'HOTEL AVAILABILITY SEARCH' + CHECK MORE HOTEL RESULTS' from travelopro website
+               also get 'HOTEL AVAILABILITY RESPONSE'
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
         First need to set the OS environment variables as below and export them:
@@ -117,7 +119,7 @@ def parse_args():
 
 
 if __name__ == '__main__':
-  
+
   args = parse_args()
   try:
       user_id = os.environ.get('travelopro_user_id') 
@@ -132,9 +134,9 @@ if __name__ == '__main__':
   search_initial_status_dict = hotel_listing_initial.get('status')
   status_sessionId = search_initial_status_dict['sessionId']
 
+with ElasticsearchConnectionManager('127.0.0.1') as _es:
   """ First/initial paginated data"""
-  with ElasticsearchConnectionManager('127.0.0.1') as _es:
-    for each_hotel in hotel_listing_initial.get('itineraries'):
+  for each_hotel in hotel_listing_initial.get('itineraries'):
       each_hotel['sessionId'] = status_sessionId
       ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
       print(ingest_response)
@@ -156,11 +158,10 @@ if __name__ == '__main__':
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken'] 
 
-      with ElasticsearchConnectionManager('127.0.0.1') as _es:
-           for each_hotel in hotel_listing_more.get('itineraries'):
-                   each_hotel['sessionId'] = status_sessionId
-                   ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
-                   print(ingest_response)
+      for each_hotel in hotel_listing_more.get('itineraries'):
+          each_hotel['sessionId'] = status_sessionId
+          ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
+          print(ingest_response)
       continue
     else:
       break
