@@ -82,9 +82,9 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
     print(response.json().get('status'))
     if response.json().get('status'):
-      if not response.json().get('status')['sessionId']:
-        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
+      if not 'sessionId' in response.json().get('status'):
+        #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+        sys.exit(f"*** ERROR *** {response.json().get('status')}" )
 
     return response.json()
   
@@ -152,11 +152,15 @@ def _get_hotel_contents_for_each_hotel(hotel_dict):
     return response.json()
 
 
+def _process_list_of_hotels_in_dict(list_of_hotel_dicts):
+    for each_hotel in list_of_hotel_dicts:
+        yield each_hotel
+
    
 if __name__ == '__main__':
   
   args = parse_args()
-
+  
   try:
       user_id = os.environ.get('travelopro_user_id') 
       user_password = os.environ.get('travelopro_user_password')  
@@ -170,22 +174,24 @@ if __name__ == '__main__':
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
   hotel_listing_initial = city_search_obj._get_initial_numof_hotels_by_city()
-  search_initial_status_dict = hotel_listing_initial.get('status')
 
+  search_initial_status_dict = hotel_listing_initial.get('status')
   print(search_initial_status_dict)
 
   hotel_count = 0
   status_sessionId = search_initial_status_dict['sessionId']
 
-  #itineraries hold hotel info in dict... loop over these and do other queries for "Get Hotel Content"
-  # GET https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId> &hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>
-  # for each hotel we query
+  """
+   itineraries hold hotel info in dict... loop over these and do other queries for "Get Hotel Content"
+   GET https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId> &hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>
+   for each hotel we query
+  """
   
 with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
   collection = mongo.connection.travelopro.hotelGetContentsBycity
 
   if args.list:
-    for each_hotel in hotel_listing_initial.get('itineraries'):
+    for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_initial.get('itineraries')):
         hotel_count += 1
         print(f"-------------------  {hotel_count} -----------------")
         each_hotel['sessionId'] = status_sessionId
@@ -202,17 +208,13 @@ with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_passwo
     hotel_listing_more = city_search_obj._get_remaining_hotels_by_city(status_sessionId, status_token)
     more_status_dict = hotel_listing_more.get('status')
     print(more_status_dict)
-
     
-    #if len(more_status_dict.get('nextToken')) != 0:
-    if more_status_dict.get('sessionId'):
+    if 'sessionId' in more_status_dict:
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken'] 
-      #print(hotel_listing_more.get('itineraries'))
-      #print(hotel_listing_more.get('nextToken'))
 
       if args.list:
-        for each_hotel in hotel_listing_more.get('itineraries'):
+        for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_more.get('itineraries')):
             hotel_count += 1
             print(f"-------------------  {hotel_count} -----------------")
             each_hotel['sessionId'] = status_sessionId

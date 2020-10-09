@@ -2,19 +2,24 @@
 __author__ = 'Shahtab Khandakar'
 
 """
-Desc: Query Travelopro Hotel Booking API to search hotels by City Name nd GET MORE HOTEL CONTENTS for the searched hotels
-      ITEM:  - 'GET HOTEL CONTENTS' -  from Travelopro website FOR MORE RECENT STATIC CONTENT
-            
+Desc: Query Travelopro Hotel Booking API to search hotels by City Name and GET MORE HOTEL CONTENTS for the searched hotels
+      ITEM:  - 'GET HOTEL CONTENTS' - from Travelopro website FOR MORE RECENT STATIC CONTENT
+             - This is in addition to 'HOTEL STATIC CONTENTS'
+             
       Can query ONLY the hotels and cities that Travelocity has in their inventory
 Usage:   
         First need to set the OS environment variables as below and export them:
         
         travelopro_user_id=
         travelopro_user_password=
+        mongodb_host=my.mongodb.net
+        mongodb_database=
+        mongodb_user_id=
+        mongodb_user_password=
 
-        hotel_search_by_city_stdout.py -c 'CITY_NAME' -C 'COUNTRY_NAME' -s true -l true
-        hotel_search_by_city_stdout.py -c 'London' -C 'United Kingdom' -s true -l true
-        hotel_search_by_city_stdout.py -c 'Barcelona' -C 'Spain' -s true -l true
+        hotel_room_rates_by_city_insert_mongo.py -c 'CITY_NAME' -C 'COUNTRY_NAME' -s true -l true
+        hotel_room_rates_by_city_insert_mongo.py -c 'London' -C 'United Kingdom' -s true -l true
+        
 """
 
 import json
@@ -29,6 +34,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
+from connections import *
 from elastic import *
 
 global _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT
@@ -83,8 +89,8 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     if response.json().get('status'):
       if not 'sessionId' in response.json().get('status'):
         #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-        sys.exit(f"*** ERROR *** {response.json().get('status')}" )
-      
+        sys.exit(f"*** ERROR ***  {response.json().get('status')}" )
+
     return response.json()
   
   def _get_remaining_hotels_by_city(self, sessionId, nextToken):
@@ -107,8 +113,8 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     print(response.json().get('status'))
     if response.json().get('status'):
       if not 'sessionId' in response.json().get('status'):
-        #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-        sys.exit(f"*** ERROR *** {response.json().get('status')}" )
+          #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+          sys.exit(f"*** ERROR *** {response.json().get('status')}" )
        
     return response.json()
 
@@ -127,19 +133,62 @@ def parse_args():
     args = parser.parse_args()
     return parser.parse_args()    
 
-def _get_hotel_contents_for_each_hotel(hotel_dict):
-    """https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId>&hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>"""
-
-    params = {
+def _get_hotel_room_rates_for_each_hotel(hotel_dict):
+    """ POST	https://travelnext.works/api/hotel_trawexv6/get_room_rates
+        I need to capture ratebasisId from the response of this function and do POST 
+        to https://travelnext.works/api/hotel_trawexv6/get_rate_rules
+        {  --- RESPONSE
+             "sessionId": "TVRVNE1qSTJOVEExTlY4ek1URmZNVEkxTGprNUxqSTBNUzR5TkE9PV8w",
+             "hotelId": "882885",
+             "tokenId": "IP8Z2AeBKGrnVvi6Hdbq",
+             "roomRates": {
+                  "perBookingRates": [  ----- list of dict
+                                       { ---- dicts
+                                          "productId": "trx101",  
+    """
+    rate_query = {
                'sessionId': hotel_dict['sessionId'],
                'hotelId': hotel_dict['hotelId'],
                'productId': hotel_dict['productId'],
                'tokenId': hotel_dict['tokenId']
                }
     try:
-        response = requests.get(
-                      _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/hotelDetails", 
-                      params=params, 
+        response = requests.post(
+                      _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/get_room_rates", 
+                      data=json.dumps(rate_query), 
+                      verify=False, 
+                      timeout=20
+                    )
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        print (err.response.text)  
+        raise SystemExit(err)
+
+    return response.json()
+
+
+def _check_hotel_room_rates_for_each_hotel(hotel_rates_dict):
+    """ POST	https://travelnext.works/api/hotel_trawexv6/get_rate_rules
+        to https://travelnext.works/api/hotel_trawexv6/get_rate_rules
+        ITEM in travelopro website 'CHECK ROOM RATES'
+        parameter is moreResults is true
+
+        CAPTURE:  {'status': {'error': 'Selected Room Not Available.'}} when calling this function
+    """
+    #Here inside each dict 'ratebasisId' exist ... get that
+    print ('--------------------------')
+    print(hotel_rates_dict)
+    #for per_booking_rate in hotel_rates_dict:
+    rate_rules_query = {
+               'sessionId': hotel_rates_dict['sessionId'],
+               'tokenId':   hotel_rates_dict['tokenId'],
+               'productId': hotel_rates_dict['productId'],
+               'rateBasisId': hotel_rates_dict['rateBasisId']
+               }
+    try:
+        response = requests.post(
+                      _TRAVELOPRO_HOTEL_SEARCH_ENDPOINT+"/api/hotel_trawexv6/get_rate_rules", 
+                      data=json.dumps(rate_rules_query), 
                       verify=False, 
                       timeout=20
                     )
@@ -155,7 +204,7 @@ def _process_list_of_hotels_in_dict(list_of_hotel_dicts):
     for each_hotel in list_of_hotel_dicts:
         yield each_hotel
 
-
+   
 if __name__ == '__main__':
   
   args = parse_args()
@@ -163,30 +212,30 @@ if __name__ == '__main__':
   try:
       user_id = os.environ.get('travelopro_user_id') 
       user_password = os.environ.get('travelopro_user_password')  
+      mongodb_host = os.environ.get('mongodb_host')
+      mongodb_database = os.environ.get('mongodb_database')
+      mongodb_user_id = os.environ.get('mongodb_user_id')
+      mongodb_user_password = os.environ.get('mongodb_user_password')
   except Exception as e:
       print(e)
       sys.exit("Required OS environment variables need to be set. Exiting ...")
-      
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
   hotel_listing_initial = city_search_obj._get_initial_numof_hotels_by_city()
   search_initial_status_dict = hotel_listing_initial.get('status')
 
   print(search_initial_status_dict)
-  #print(hotel_listing_initial.get('status'))
-  #print(search_initial_status_dict['sessionId'
-  #print(hotel_listing_initial.get('itineraries'))
 
   hotel_count = 0
   status_sessionId = search_initial_status_dict['sessionId']
 
-  """ 
-    itineraries hold hotel info in dict... loop over these and do other queries for "Get Hotel Content"
-    GET https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId> &hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>
-    for each hotel we query
-  """
+  #itineraries hold hotel info in dict... loop over these and do other queries for "Get Hotel Content"
+  # GET https://travelnext.works/api/hotel_trawexv6/hotelDetails?sessionId=<sessionId> &hotelId=<hotelId>&productId=trx104&tokenId=<tokenId>
+  # for each hotel we query
   
-with ElasticsearchConnectionManager('127.0.0.1') as _es:
+with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
+  collection = mongo.connection.travelopro.hotelRoomRatesByCity
+  """ hotel_listing_initial.get('itineraries') is a list of dicts each with hotel info """
 
   if args.list:
     for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_initial.get('itineraries')):
@@ -195,10 +244,17 @@ with ElasticsearchConnectionManager('127.0.0.1') as _es:
         each_hotel['sessionId'] = status_sessionId
         print(each_hotel)
 
-        get_hotel_contents = _get_hotel_contents_for_each_hotel(each_hotel)
-        ingest_response = _es.index(index='travelopro-hotel-more-static-contents-by-city', doc_type='_doc', body=get_hotel_contents)
-        print(ingest_response)
+        room_rates_for_each_hotel = _get_hotel_room_rates_for_each_hotel(each_hotel)
+        print(room_rates_for_each_hotel)
+        if 'roomRates' in room_rates_for_each_hotel:
+          for per_booking_rate in room_rates_for_each_hotel['roomRates']['perBookingRates']:
+              per_booking_rate['sessionId'] = room_rates_for_each_hotel['sessionId']
+              per_booking_rate['hotelId'] = room_rates_for_each_hotel['hotelId']
+              per_booking_rate['tokenId'] = room_rates_for_each_hotel['tokenId']
 
+          print(per_booking_rate)
+          insert_response = collection.insert_one(per_booking_rate)
+          print(f"--- {insert_response} ---")
   
   status_token = search_initial_status_dict['nextToken']
   status_sessionId = search_initial_status_dict['sessionId']
@@ -206,13 +262,10 @@ with ElasticsearchConnectionManager('127.0.0.1') as _es:
   while status_token:
     hotel_listing_more = city_search_obj._get_remaining_hotels_by_city(status_sessionId, status_token)
     more_status_dict = hotel_listing_more.get('status')
-    print(more_status_dict)
     
-    if 'sessionId' in more_status_dict:
+    if more_status_dict.get('sessionId'):
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken'] 
-      #print(hotel_listing_more.get('itineraries'))
-      #print(hotel_listing_more.get('nextToken'))
 
       if args.list:
         for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_more.get('itineraries')):
@@ -221,9 +274,18 @@ with ElasticsearchConnectionManager('127.0.0.1') as _es:
             each_hotel['sessionId'] = status_sessionId
             print(each_hotel)
 
-            get_hotel_contents = _get_hotel_contents_for_each_hotel(each_hotel)
-            ingest_response = _es.index(index='travelopro-hotel-more-static-contents-by-city', doc_type='_doc', body=get_hotel_contents)
-            print(ingest_response)
+            room_rates_for_each_hotel = _get_hotel_room_rates_for_each_hotel(each_hotel)
+            if 'roomRates' in room_rates_for_each_hotel:
+                for per_booking_rate in room_rates_for_each_hotel['roomRates']['perBookingRates']:
+                    per_booking_rate['sessionId'] = room_rates_for_each_hotel['sessionId']
+                    per_booking_rate['hotelId'] = room_rates_for_each_hotel['hotelId']
+                    per_booking_rate['tokenId'] = room_rates_for_each_hotel['tokenId']
+
+                    print(per_booking_rate)
+                    insert_response = collection.insert_one(per_booking_rate)
+                    print(insert_response)
+            else:
+                  continue
           
       continue
     else :

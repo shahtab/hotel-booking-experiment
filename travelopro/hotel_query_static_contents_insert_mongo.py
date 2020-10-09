@@ -103,11 +103,9 @@ if __name__ == '__main__':
   
   args = parse_args()
   
-  """ these are environment variables set in OS for the user"""
   try:
       user_id = os.environ.get('travelopro_user_id') 
       user_password = os.environ.get('travelopro_user_password')  
-
       mongodb_host = os.environ.get('mongodb_host')
       mongodb_database = os.environ.get('mongodb_database')
       mongodb_user_id = os.environ.get('mongodb_user_id')

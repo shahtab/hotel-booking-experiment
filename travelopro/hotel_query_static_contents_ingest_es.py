@@ -102,7 +102,7 @@ def parse_args():
 if __name__ == '__main__':
   
   args = parse_args()
-  
+
   try:
       user_id = os.environ.get('travelopro_user_id') 
       user_password = os.environ.get('travelopro_user_password')  
@@ -119,7 +119,6 @@ if __name__ == '__main__':
 
   for each_hotel in hotel_static_contents_list_of_dict:
         print(each_hotel)
-
 
   with ElasticsearchConnectionManager('127.0.0.1') as _es:
     for each_hotel in hotel_static_contents_list_of_dict:

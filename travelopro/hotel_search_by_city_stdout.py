@@ -1,4 +1,4 @@
-
+#!/usr/local/Cellar/python@3.8/3.8.5/bin/python3
 __author__ = 'Shahtab Khandakar'
 
 """
@@ -81,9 +81,10 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
     print(response.json().get('status'))
     if response.json().get('status'):
-      if not response.json().get('status')['sessionId']:
-        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
+      if not 'sessionId' in response.json().get('status'):
+        #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+        sys.exit(f"*** ERROR *** {response.json().get('status')}" )
+
 
     return response.json()
   
@@ -103,12 +104,13 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
       print (err.response.text)
       raise SystemExit(err)
 
+    resp_json = response.json()
+
     """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
-    print(response.json().get('status'))
-    if response.json().get('status'):
-      if not response.json().get('status')['sessionId']:
-        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
+    print(resp_json.get('status'))
+    if resp_json.get('status'):
+      if not 'sessionId' in response.json().get('status'):
+        sys.exit(f"*** ERROR *** {response.json.get('status')}" )
        
     return response.json()
 
@@ -127,6 +129,11 @@ def parse_args():
     args = parser.parse_args()
     return parser.parse_args()    
 
+
+def _process_list_of_hotels_in_dict(list_of_hotel_dicts):
+    for each_hotel in list_of_hotel_dicts:
+        yield each_hotel
+
    
 if __name__ == '__main__':
   
@@ -134,14 +141,11 @@ if __name__ == '__main__':
 
   try:
       user_id = os.environ.get('travelopro_user_id') 
-      user_id = os.environ.get('travelopro_user_id') 
-      user_id = os.environ.get('travelopro_user_id') 
-      user_password = os.environ.get('travelopro_user_password')  
-      user_password = os.environ.get('travelopro_user_password')  
       user_password = os.environ.get('travelopro_user_password')  
   except Exception as e:
       print(e)
       sys.exit("Required OS environment variables need to be set. Exiting ...")
+
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
   hotel_listing_initial = city_search_obj._get_initial_numof_hotels_by_city()
@@ -149,14 +153,14 @@ if __name__ == '__main__':
 
   print(search_initial_status_dict)
   #print(hotel_listing_initial.get('status'))
-  #print(search_initial_status_dict['sessionId'
+  #print(search_initial_status_dict['sessionId'])
   #print(hotel_listing_initial.get('itineraries'))
 
   hotel_count = 0
   status_sessionId = search_initial_status_dict['sessionId']
 
   if args.list:
-    for each_hotel in hotel_listing_initial.get('itineraries'):
+    for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_initial.get('itineraries')):
         hotel_count += 1
         print(f"-------------------  {hotel_count} -----------------")
         each_hotel['sessionId'] = status_sessionId
@@ -170,15 +174,12 @@ if __name__ == '__main__':
     more_status_dict = hotel_listing_more.get('status')
     print(more_status_dict)
     
-    #if len(more_status_dict.get('nextToken')) != 0:
-    if more_status_dict.get('sessionId'):
+    if 'sessionId' in more_status_dict:
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken'] 
-      #print(hotel_listing_more.get('itineraries'))
-      #print(hotel_listing_more.get('nextToken'))
 
       if args.list:
-        for each_hotel in hotel_listing_more.get('itineraries'):
+        for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_more.get('itineraries')):
             hotel_count += 1
             print(f"-------------------  {hotel_count} -----------------")
             each_hotel['sessionId'] = status_sessionId

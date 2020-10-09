@@ -80,9 +80,8 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
 
     """ This is required as Travelopro send status code of 200 even though when access is denied ... This is a Hack :-("""
     if response.json().get('status'):
-      if not response.json().get('status')['sessionId']:
-        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
+      if not 'sessionId' in response.json().get('status'):
+          sys.exit(f"*** ERROR *** {response.json().get('status')}")
 
     return response.json()
   
@@ -118,12 +117,18 @@ def parse_args():
     return parser.parse_args()    
 
 
+def _process_list_of_hotels_in_dict(list_of_hotel_dicts):
+    for each_hotel in list_of_hotel_dicts:
+        yield each_hotel
+
+
 if __name__ == '__main__':
 
   args = parse_args()
+ 
   try:
       user_id = os.environ.get('travelopro_user_id') 
-      user_password = os.environ.get('travelopro_user_password')
+      user_password = os.environ.get('travelopro_user_password')  
   except Exception as e:
       print(e)
       sys.exit("Required OS environment variables need to be set. Exiting ...")
@@ -136,7 +141,7 @@ if __name__ == '__main__':
 
 with ElasticsearchConnectionManager('127.0.0.1') as _es:
   """ First/initial paginated data"""
-  for each_hotel in hotel_listing_initial.get('itineraries'):
+  for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_initial.get('itineraries')):
       each_hotel['sessionId'] = status_sessionId
       ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
       print(ingest_response)
@@ -154,11 +159,11 @@ with ElasticsearchConnectionManager('127.0.0.1') as _es:
     
     """ hotel_listing_more.get('itineraries') is a LIST of DICTS"""
 
-    if more_status_dict.get('sessionId'):
+    if 'sessionId' in more_status_dict:
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken'] 
 
-      for each_hotel in hotel_listing_more.get('itineraries'):
+      for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_more.get('itineraries')):
           each_hotel['sessionId'] = status_sessionId
           ingest_response = _es.index(index='travelopro-hotels-by-city', doc_type='_doc', body=each_hotel)
           print(ingest_response)

@@ -86,9 +86,9 @@ class TraveloproHotelSearchByCity(TraveloproHotelSearch):
     """ This is required as Travelopro send status code of 200 even though when access is denied This is a Hack :-("""
     print(response.json().get('status'))
     if response.json().get('status'):
-      if not response.json().get('status')['sessionId']:
-        if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
-          sys.exit(f"*** ERROR *** Access is denied to travelopro endpoint for user id: {user_id}" )
+      if not 'sessionId' in response.json().get('status'):
+        #if response.json().get('status')['errors'][0]['errorMessage'] == 'Access Denied':
+        sys.exit(f"*** ERROR *** {response.json.get('status')}" )
 
     return response.json()
 
@@ -124,16 +124,18 @@ def parse_args():
     args = parser.parse_args()
     return parser.parse_args()         
 
+def _process_list_of_hotels_in_dict(list_of_hotel_dicts):
+    for each_hotel in list_of_hotel_dicts:
+        yield each_hotel
+
    
 if __name__ == '__main__':
   
   args = parse_args()
- 
-  """ these are environment variables set in OS for the user"""
+
   try:
       user_id = os.environ.get('travelopro_user_id') 
       user_password = os.environ.get('travelopro_user_password')  
-
       mongodb_host = os.environ.get('mongodb_host')
       mongodb_database = os.environ.get('mongodb_database')
       mongodb_user_id = os.environ.get('mongodb_user_id')
@@ -144,13 +146,13 @@ if __name__ == '__main__':
 
   city_search_obj = TraveloproHotelSearchByCity(user_id, user_password, 'Test', args.cityname, args.countryname)
   hotel_listing_initial = city_search_obj._get_initial_numof_hotels_by_city()
+
   search_initial_status_dict = hotel_listing_initial.get('status')
   status_sessionId = search_initial_status_dict['sessionId']
 
-  #print(hotel_listing.get('itineraries'))
-  with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
-    collection = mongo.connection.travelopro.hotelsByCity
-    for each_hotel in hotel_listing_initial.get('itineraries'):
+with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
+  collection = mongo.connection.travelopro.hotelsByCity
+  for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_initial.get('itineraries')):
       try:
         each_hotel['sessionId'] = status_sessionId
         insert_response = collection.insert_one(each_hotel)
@@ -170,14 +172,12 @@ if __name__ == '__main__':
     
     """ hotel_listing_more.get('itineraries') is a LIST of DICTS"""
 
-    if more_status_dict.get('sessionId'):
+    if 'sessionId' in more_status_dict:
       status_sessionId = more_status_dict['sessionId'] 
       status_token = more_status_dict['nextToken']
 
       #all_hotel_ids = [each_hotel['hotelId'] for each_hotel in hotel_listing_more.get('itineraries')]
-      #with MongoDBConnectionManager(mongodb_host, mongodb_user_id, mongodb_user_password, mongodb_database) as mongo:
-      collection = mongo.connection.travelopro.hotelsByCity
-      for each_hotel in hotel_listing_more.get('itineraries'):
+      for each_hotel in _process_list_of_hotels_in_dict(hotel_listing_more.get('itineraries')):
           try:
               each_hotel['sessionId'] = status_sessionId
               insert_response = collection.insert_one(each_hotel)

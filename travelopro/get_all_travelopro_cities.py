@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
    try:
       user_id = os.environ.get('travelopro_user_id') 
-      user_password = os.environ.get('travelopro_user_password')
+      user_password = os.environ.get('travelopro_user_password')  
       mongodb_host = os.environ.get('mongodb_host')
       mongodb_database = os.environ.get('mongodb_database')
       mongodb_user_id = os.environ.get('mongodb_user_id')
@@ -89,7 +89,6 @@ if __name__ == '__main__':
       sys.exit("Required OS environment variables need to be set. Exiting ...")
 
    all_cities_obj = TraveloproAllCities(user_id, user_password)
-
    all_cities = all_cities_obj._get_all_travelopro_cities()
 
    for each_city in all_cities['cities']:

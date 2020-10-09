@@ -4,12 +4,12 @@
   "access": "{{ access }}",
   "ip_address": "10.10.10.11",
   "requiredCurrency": "USD",
-  "checkin": "2020-10-17",
-  "checkout": "2020-10-18",
+  "checkin": "2020-11-28",
+  "checkout": "2020-11-29",
   "city_name": "{{ city_name }}",
   "country_name": "{{ country_name }}",
-  "radius": 50,
-  "maxResult": 200,
+  "radius": 20,
+  "maxResult": 100,
   "occupancy": [
     {
       "room_no": 1,
