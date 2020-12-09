@@ -9,6 +9,7 @@ We need to run a few components locally to test functionalities
 	- Redis 
 	- Elasticsearch 7.x and Kibana
 	- Vault
+	- MongoDB
 
 Each of the python scripts  have some dependencies on python modules so install them beforehand
 
